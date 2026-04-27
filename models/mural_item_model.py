@@ -1,6 +1,8 @@
-from datetime import datetime
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text
+from datetime import datetime, timezone
+from sqlalchemy import Boolean, Column, Integer, String, ForeignKey, BigInteger, DateTime, Text, func
+from sqlalchemy.orm import relationship
 from db.base_class import Base
+from models.auth_user_model import AuthUserModel
 
 
 class MuralItemModel(Base):
@@ -19,8 +21,16 @@ class MuralItemModel(Base):
     is_active = Column(Boolean, nullable=False, default=True)
     is_pinned = Column(Boolean, nullable=False, default=False)
 
-    starts_at = Column(DateTime, nullable=False)
-    ends_at = Column(DateTime, nullable=True)
+    starts_at = Column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),  # ✅ Python
+        server_default=func.now(),
+        nullable=False
+    )
+    ends_at = Column(
+        DateTime(timezone=True),
+        nullable=True
+    )
 
     is_indefinite = Column(Boolean, nullable=False, default=False)
     until_read = Column(Boolean, nullable=False, default=False)
@@ -29,7 +39,9 @@ class MuralItemModel(Base):
     attachment_url = Column(String(500), nullable=True)
     image_url = Column(String(500), nullable=True)
 
-    created_by = Column(Integer, ForeignKey("auth_user.id"), nullable=False)
+    created_by_id = Column(Integer, ForeignKey("auth_user.id"), nullable=False)
+    created_by = relationship("AuthUserModel", lazy="selectin")
+
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=False,
                         default=datetime.utcnow, onupdate=datetime.utcnow)

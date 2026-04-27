@@ -28,8 +28,8 @@ target_metadata = Base.metadata
 VERSION_TABLE = "alembic_version_mural"
 PREFIX_LIST = [
     "mural_",
-    "auth_user",
-    "logistica_groupaditionalinformation"
+    # "auth_user",
+    # "logistica_groupaditionalinformation"
 ]
 
 

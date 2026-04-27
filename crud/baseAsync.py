@@ -215,7 +215,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
     # CRUD write (inalterado)
     # ----------------------
     async def create(self, db: AsyncSession, *, obj_in: CreateSchemaType) -> ModelType:
-        obj_data = jsonable_encoder(obj_in)
+        obj_data = obj_in.model_dump()
         db_obj = self.model(**obj_data)  # type: ignore
         db.add(db_obj)
         await db.commit()
@@ -235,12 +235,15 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         db_obj: ModelType,
         obj_in: Union[UpdateSchemaType, Dict[str, Any]]
     ) -> ModelType:
-        update_data = obj_in if isinstance(
-            obj_in, dict) else obj_in.dict(exclude_unset=True)
+        update_data = obj_in.model_dump(exclude_unset=True)
+
         for field, value in update_data.items():
             setattr(db_obj, field, value)
+
+        db.add(db_obj)
         await db.commit()
         await db.refresh(db_obj)
+
         return db_obj
 
     async def update_multi(
