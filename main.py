@@ -8,13 +8,14 @@ from opentelemetry.instrumentation.logging import LoggingInstrumentor
 from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
 from fastapi.openapi.docs import get_swagger_ui_html, get_redoc_html
 from fastapi.openapi.utils import get_openapi
+from core.config import settings
 
 
 def api_factory():
     app = FastAPI(title=settings.PROJECT_NAME,
-                  root_path="/Template",
-                  version='0.0.1',
-                  description='Template para criação de APIs',
+                  root_path=settings.ROOT_PATH,
+                  version=settings.API_VERSION,
+                  description=settings.DESCRIPTION,
                   )
     logging.config.dictConfig(settings.LOGGING_CONFIG)
     LoggingInstrumentor().instrument()
@@ -39,7 +40,7 @@ def api_factory():
 app = api_factory()
 
 
-@app.get(f"{app.root_path}/", description='Resposta somente para validar se a API subiu corretamente. Sem nenhuma conexão com o banco de dados.',
+@app.get(f"/health/", description='Resposta somente para validar se a API subiu corretamente. Sem nenhuma conexão com o banco de dados.',
          summary='Valida se API está no ar')
 def get_index():
     return {'msg': 'API está no ar!'}
@@ -67,7 +68,8 @@ async def get_custom_openapi():
 def run():
     log_config = uvicorn.config.LOGGING_CONFIG
     log_config["formatters"]["access"]["fmt"] = settings.LOGGING_CONFIG["formatters"]["standard"]["format"]
-    uvicorn.run("main:app", log_config=log_config, reload=True)
+    uvicorn.run("main:app", log_config=log_config,
+                reload=True, port=settings.FASTAPI_PORT)
 
 
 if __name__ == "__main__":

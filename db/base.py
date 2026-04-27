@@ -1,2 +1,9 @@
 from .base_class import Base  # noqa
-from models.car_model import Car
+from models.gai_model import GaiModel  # noqa
+from models.auth_group_model import AuthGroupModel  # noqa
+from models.auth_user_model import AuthUserModel  # noqa
+from models.mural_item_gai_model import MuralItemGaiModel  # noqa
+from models.mural_item_user_model import MuralItemUserModel  # noqa
+from models.mural_item_group_model import MuralItemGroupModel  # noqa
+from models.mural_item_model import MuralItemModel  # noqa
+from models.mural_item_read_model import MuralItemReadModel  # noqa
