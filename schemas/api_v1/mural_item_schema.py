@@ -72,3 +72,7 @@ class MuralItemUpdateSC(MuralItemBaseSC):
 
 class MuralItemInDbBaseSC(MuralItemBaseSC):
     id: int
+
+
+class PayloadMuralItemCreateSC(MuralItemCreateSC):
+    ids: Optional[list[int]] = None

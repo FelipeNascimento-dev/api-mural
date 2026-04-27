@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 
 class MuralItemGroupBaseSC(BaseModel):
     mural_item_id: int
-    gai_id: int
+    group_id: int
 
 
 class MuralItemGroupCreateSC(MuralItemGroupBaseSC):
