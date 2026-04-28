@@ -326,12 +326,19 @@ async def delete_item(
         *,
         db: AsyncSession = Depends(deps.get_db_psql),
         id: int,
+        obj_in: MuralItemUpdateSC
 ) -> Any:
     """
-    Delete an item.
+    Desabilita a visualização do item, sem remover o registro dele no DB.
     """
     item = await mural_item_crud.get(db=db, id=id)
+
     if not item:
         raise HTTPException(status_code=404, detail="item not found")
-    item = await mural_item_crud.remove(db=db, id=id)
-    return item
+
+    item_update = MuralItemUpdateSC(
+        is_active=False
+    )
+
+    item_att = await mural_item_crud.update(db=db, db_obj=item, obj_in=item_update)
+    return item_att

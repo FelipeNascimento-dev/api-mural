@@ -65,8 +65,8 @@ class MuralItemCreateSC(MuralItemBaseSC):
     pass
 
 
-class MuralItemUpdateSC(MuralItemBaseSC):
-    updated_at: Optional[datetime.datetime] = None
+class MuralItemUpdateSC(BaseModel):
+    is_active: bool = True
 
 
 class MuralItemInDbBaseSC(MuralItemBaseSC):
