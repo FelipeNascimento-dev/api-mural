@@ -1,7 +1,7 @@
 # Minhas Regras
-config.py
-core\config.py
-core/config.py
+#config.py
+#core\config.py
+#core/config.py
 firebase-adminsdk.JSON
 web.config
 # Byte-compiled / optimized / DLL files

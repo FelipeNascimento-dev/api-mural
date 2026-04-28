@@ -1,7 +1,6 @@
 import datetime
 from pydantic import BaseModel, field_serializer
 from typing import Optional, Text, Literal
-import datetime
 from zoneinfo import ZoneInfo
 from pydantic import BaseModel, Field
 from enum import Enum
@@ -36,14 +35,14 @@ class MuralItemBaseSC(BaseModel):
     item_type: MuralTypeEnum
     severity: MuralSeverityEnum
     target_type: MuralTargetTypeEnum
-    is_active: bool
-    is_pinned: bool
+    is_active: bool = True
+    is_pinned: bool = False
 
     starts_at: Optional[datetime.datetime] = None
     ends_at: Optional[datetime.datetime] = None
 
-    is_indefinite: bool
-    until_read: bool
+    is_indefinite: bool = False
+    until_read: bool = False
 
     external_link: str
     attachment_url: str

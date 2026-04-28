@@ -9,6 +9,7 @@ from pydantic import BaseModel
 class GaiBaseSC(BaseModel):
     nome: Optional[str] = None
     cod_iata: Optional[str] = None
+    group_id: int
     # Pydantic v2
     model_config = {"from_attributes": True, "use_enum_values": True}
     # Se estiver em Pydantic v1, use:

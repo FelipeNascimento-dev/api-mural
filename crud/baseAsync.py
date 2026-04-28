@@ -4,7 +4,7 @@ from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import update, desc, and_
+from sqlalchemy import update, desc, asc, and_, or_, not_, true, false
 from db.base_class import Base
 
 ModelType = TypeVar("ModelType", bound=Base)
@@ -15,6 +15,95 @@ UpdateSchemaType = TypeVar("UpdateSchemaType", bound=BaseModel)
 class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
     def __init__(self, model: Type[ModelType]):
         self.model = model
+
+    def _build_dynamic_condition(
+        self,
+        stmt,
+        filter_item: Dict[str, Any],
+        join_tracker: Dict[str, bool]
+    ):
+        """
+        Monta filtros simples ou agrupados.
+
+        Filtro simples:
+        {
+            "field": "is_active",
+            "operator": "=",
+            "value": True
+        }
+
+        Filtro agrupado:
+        {
+            "logic": "or",
+            "conditions": [
+                {"field": "target_type", "operator": "=", "value": "all"},
+                {"field": "id", "operator": "in", "value": [1, 2, 3]}
+            ]
+        }
+        """
+
+        # Filtro agrupado: AND / OR / NOT
+        if "logic" in filter_item:
+            logic = str(filter_item.get("logic", "and")).lower()
+            conditions_data = filter_item.get("conditions", [])
+
+            built_conditions = []
+
+            for condition_data in conditions_data:
+                stmt, condition = self._build_dynamic_condition(
+                    stmt,
+                    condition_data,
+                    join_tracker
+                )
+
+                if condition is not None:
+                    built_conditions.append(condition)
+
+            if not built_conditions:
+                return stmt, None
+
+            if logic == "and":
+                return stmt, and_(*built_conditions)
+
+            if logic == "or":
+                return stmt, or_(*built_conditions)
+
+            if logic == "not":
+                return stmt, not_(and_(*built_conditions))
+
+            raise ValueError(f"Lógica '{logic}' não suportada.")
+
+        # Filtro simples
+        field = filter_item["field"]
+        op = filter_item.get("operator", "=")
+        value = filter_item.get("value")
+
+        op = "=" if op == "==" else op
+
+        if op not in self._OP:
+            raise ValueError(f"Operador '{op}' não suportado.")
+
+        value = self._normalize_like(op, value)
+
+        stmt, attr = self._resolve_and_join(stmt, field, join_tracker)
+
+        # Tratamento seguro para IN / NOT IN
+        if op in ("in", "notin"):
+            if not isinstance(value, (list, tuple, set)):
+                raise ValueError(
+                    f"Operador '{op}' exige lista/tupla de valores.")
+
+            value = list(value)
+
+            # Evita SQL inválido ou comportamento inesperado
+            if len(value) == 0:
+                if op == "in":
+                    return stmt, false()
+
+                if op == "notin":
+                    return stmt, true()
+
+        return stmt, self._OP[op](attr, value)
 
     # ----------------------
     # Helpers para relações
@@ -110,6 +199,46 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         result = await db.execute(stmt)
         return result.scalars().unique().first()
 
+    async def get_last_by_filters(
+        self, db: AsyncSession, *, filters: Dict[str, Dict[str, Union[str, int]]]
+    ) -> Optional[ModelType]:
+        """
+        filters esperado:
+        {
+          "status": {"operator": "==", "value": "IN_DEPOT"},
+          "product.client_name": {"operator": "ilike", "value": "cielo"}
+        }
+        """
+        join_tracker: Dict[str, bool] = {}
+        stmt = select(self.model)
+
+        conditions = []
+        for field, condition in filters.items():
+            op = condition["operator"]
+            op = '=' if op == '==' else op
+            value = condition.get("value")
+
+            if op not in self._OP:
+                raise ValueError(f"Operador '{op}' não suportado.")
+
+            value = self._normalize_like(op, value)
+            stmt, attr = self._resolve_and_join(stmt, field, join_tracker)
+
+            if op in ("in", "notin") and not isinstance(value, (list, tuple, set)):
+                raise ValueError(
+                    f"Operador '{op}' exige lista/tupla de valores.")
+
+            conditions.append(self._OP[op](attr, value))
+
+        if conditions:
+            stmt = stmt.where(and_(*conditions))
+
+        # último por id desc
+        stmt = stmt.order_by(desc(self.model.id))
+
+        result = await db.execute(stmt)
+        return result.scalars().unique().first()
+
     async def get_multi(
         self, db: AsyncSession, *, skip: int = 0, limit: int = 100, order_by: str = "id"
     ) -> List[ModelType]:
@@ -171,49 +300,87 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         result = await db.execute(stmt)
         return result.scalars().unique().all()
 
-    async def get_last_by_filters(
-        self, db: AsyncSession, *, filters: Dict[str, Dict[str, Union[str, int]]]
-    ) -> Optional[ModelType]:
+    async def get_multi_dynamic_filters(
+        self,
+        db: AsyncSession,
+        *,
+        filters: Optional[List[Dict[str, Any]]] = None,
+        order_by: str = "id",
+        order_direction: str = "asc",
+        force_order_id: bool = False,
+        offset: int = 0,
+        limit: int = 100,
+
+    ) -> List[ModelType]:
         """
-        filters esperado:
-        {
-          "status": {"operator": "==", "value": "IN_DEPOT"},
-          "product.client_name": {"operator": "ilike", "value": "cielo"}
-        }
+        Consulta genérica com filtros dinâmicos e agrupados.
+
+        Exemplo:
+        filters=[
+            {"field": "is_active", "operator": "=", "value": True},
+            {
+                "logic": "or",
+                "conditions": [
+                    {"field": "target_type", "operator": "=", "value": "all"},
+                    {"field": "id", "operator": "in", "value": [1, 2, 3]}
+                ]
+            }
+        ]
         """
+
         join_tracker: Dict[str, bool] = {}
         stmt = select(self.model)
 
-        conditions = []
-        for field, condition in filters.items():
-            op = condition["operator"]
-            op = '=' if op == '==' else op
-            value = condition.get("value")
+        final_conditions = []
 
-            if op not in self._OP:
-                raise ValueError(f"Operador '{op}' não suportado.")
+        if filters:
+            for filter_item in filters:
+                stmt, condition = self._build_dynamic_condition(
+                    stmt,
+                    filter_item,
+                    join_tracker
+                )
 
-            value = self._normalize_like(op, value)
-            stmt, attr = self._resolve_and_join(stmt, field, join_tracker)
+                if condition is not None:
+                    final_conditions.append(condition)
 
-            if op in ("in", "notin") and not isinstance(value, (list, tuple, set)):
-                raise ValueError(
-                    f"Operador '{op}' exige lista/tupla de valores.")
+        if final_conditions:
+            stmt = stmt.where(and_(*final_conditions))
 
-            conditions.append(self._OP[op](attr, value))
+        # Ordenação dinâmica
+        if order_by:
 
-        if conditions:
-            stmt = stmt.where(and_(*conditions))
+            stmt, order_attr = self._resolve_and_join(
+                stmt,
+                order_by,
+                join_tracker
+            )
+            # if distinct_on_id:
+            #     stmt = stmt.distinct(self.model.id)
 
-        # último por id desc
-        stmt = stmt.order_by(desc(self.model.id))
+            if order_direction.lower() == "desc":
+                if force_order_id:
+                    stmt = stmt.order_by(desc(order_attr), desc(self.model.id))
+                else:
+                    stmt = stmt.order_by(desc(order_attr))
+            else:
+                if force_order_id:
+                    stmt = stmt.order_by(asc(order_attr), asc(self.model.id))
+                else:
+                    stmt = stmt.order_by(asc(order_attr))
+
+        # stmt = stmt.offset(skip).limit(limit)
+        if offset:
+            stmt = stmt.offset(offset)
+        if limit:
+            stmt = stmt.limit(limit)
 
         result = await db.execute(stmt)
-        return result.scalars().unique().first()
-
+        return result.scalars().unique().all()
     # ----------------------
     # CRUD write (inalterado)
     # ----------------------
+
     async def create(self, db: AsyncSession, *, obj_in: CreateSchemaType) -> ModelType:
         obj_data = obj_in.model_dump()
         db_obj = self.model(**obj_data)  # type: ignore

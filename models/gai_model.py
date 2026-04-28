@@ -1,10 +1,11 @@
 
 from sqlalchemy import (
-    Column, Integer, String
+    Column, ForeignKey, Integer, String
 )
 from sqlalchemy.orm import relationship
 from db.base_class import Base
 from sqlalchemy.orm import declarative_base
+from models.auth_group_model import AuthGroupModel  # noqa
 
 
 class GaiModel(Base):
@@ -15,6 +16,9 @@ class GaiModel(Base):
     # Campos espelhando o Django GroupAditionalInformation
     nome = Column(String(100), nullable=True)
     cod_iata = Column(String(100), nullable=True, index=True)
+    group_id = Column(Integer, ForeignKey(
+        "auth_group.id"), nullable=False)
+
     # sales_channel = Column(String(100), nullable=True, index=True)
     # deposito = Column(String(100), nullable=True, index=True)
     # cod_center = Column(String(10), nullable=True, index=True)
