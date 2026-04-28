@@ -325,8 +325,7 @@ async def create_item(
 async def delete_item(
         *,
         db: AsyncSession = Depends(deps.get_db_psql),
-        id: int,
-        obj_in: MuralItemUpdateSC
+        id: int
 ) -> Any:
     """
     Desabilita a visualização do item, sem remover o registro dele no DB.
