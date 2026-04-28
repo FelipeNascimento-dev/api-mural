@@ -28,19 +28,6 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-@router.get("/", response_model=List[MuralItemInDbBaseSC])
-async def read_items(
-        db: AsyncSession = Depends(deps.get_db_psql),
-        skip: int = 0,
-        limit: int = 100,
-) -> Any:
-    """
-    Retrieve items.
-    """
-    logger.info("Consultando Itens")
-    return await mural_item_crud.get_multi(db=db, skip=skip, limit=limit)
-
-
 @router.get("/{id}", response_model=MuralItemInDbBaseSC)
 async def read_item_by_id(
         id: int,
@@ -53,6 +40,19 @@ async def read_item_by_id(
     item = await mural_item_crud.get_first_by_filter(
         db=db, filterby="id", filter=id)
     return item
+
+
+@router.get("/", response_model=List[MuralItemInDbBaseSC])
+async def read_items(
+        db: AsyncSession = Depends(deps.get_db_psql),
+        skip: int = 0,
+        limit: int = 100,
+) -> Any:
+    """
+    Retrieve items.
+    """
+    logger.info("Consultando Itens")
+    return await mural_item_crud.get_multi(db=db, skip=skip, limit=limit)
 
 
 @router.get("/by-user/", response_model=List[MuralItemInDbBaseSC])
@@ -188,76 +188,33 @@ async def read_items_by_user(
     # =====================================================
     # 6. Montar regra de visibilidade
     # =====================================================
-    visibility_conditions = [
-        {
-            "field": "target_type",
-            "operator": "=",
-            "value": "all"
-        },
+    visibility_conditions = []
 
-    ]
-
+    visibility_conditions.append(mural_item_service.build_visibility_conditions(
+        target_type="all", ids=[]))
+    print(visibility_conditions)
     if itens_user_ids:
         visibility_conditions.append(
-            {
-                "logic": "and",
-                "conditions": [
-                    {
-                        "field": "target_type",
-                        "operator": "=",
-                        "value": "users"
-                    },
-                    {
-                        "field": "id",
-                        "operator": "in",
-                        "value": itens_user_ids
-                    }
-                ]
-            }
+            mural_item_service.build_visibility_conditions(
+                target_type="users", ids=itens_user_ids)
         )
-
+    print(visibility_conditions)
     if itens_gai_ids:
         visibility_conditions.append(
-            {
-                "logic": "and",
-                "conditions": [
-                    {
-                        "field": "target_type",
-                        "operator": "=",
-                        "value": "gais"
-                    },
-                    {
-                        "field": "id",
-                        "operator": "in",
-                        "value": itens_gai_ids
-                    }
-                ]
-            }
+            mural_item_service.build_visibility_conditions(
+                target_type="gais", ids=itens_gai_ids)
         )
-
+    print(visibility_conditions)
     if itens_group_ids:
         visibility_conditions.append(
-            {
-                "logic": "and",
-                "conditions": [
-                    {
-                        "field": "target_type",
-                        "operator": "=",
-                        "value": "groups"
-                    },
-                    {
-                        "field": "id",
-                        "operator": "in",
-                        "value": itens_group_ids
-                    }
-                ]
-            }
+            mural_item_service.build_visibility_conditions(
+                target_type="groups", ids=itens_group_ids)
         )
 
     # =====================================================
     # 7. Consulta final dos itens do mural
     # =====================================================
-
+    print(visibility_conditions)
     filters = [
         {
             "logic": "or",
@@ -368,13 +325,19 @@ async def create_item(
 async def delete_item(
         *,
         db: AsyncSession = Depends(deps.get_db_psql),
-        id: int,
+        id: int
 ) -> Any:
     """
-    Delete an item.
+    Desabilita a visualização do item, sem remover o registro dele no DB.
     """
     item = await mural_item_crud.get(db=db, id=id)
+
     if not item:
         raise HTTPException(status_code=404, detail="item not found")
-    item = await mural_item_crud.remove(db=db, id=id)
-    return item
+
+    item_update = MuralItemUpdateSC(
+        is_active=False
+    )
+
+    item_att = await mural_item_crud.update(db=db, db_obj=item, obj_in=item_update)
+    return item_att
