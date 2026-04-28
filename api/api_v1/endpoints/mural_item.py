@@ -192,19 +192,19 @@ async def read_items_by_user(
 
     visibility_conditions.append(mural_item_service.build_visibility_conditions(
         target_type="all", ids=[]))
-    print(visibility_conditions)
+
     if itens_user_ids:
         visibility_conditions.append(
             mural_item_service.build_visibility_conditions(
                 target_type="users", ids=itens_user_ids)
         )
-    print(visibility_conditions)
+
     if itens_gai_ids:
         visibility_conditions.append(
             mural_item_service.build_visibility_conditions(
                 target_type="gais", ids=itens_gai_ids)
         )
-    print(visibility_conditions)
+
     if itens_group_ids:
         visibility_conditions.append(
             mural_item_service.build_visibility_conditions(
@@ -214,7 +214,7 @@ async def read_items_by_user(
     # =====================================================
     # 7. Consulta final dos itens do mural
     # =====================================================
-    print(visibility_conditions)
+
     filters = [
         {
             "logic": "or",
