@@ -26,7 +26,7 @@ class Settings(BaseSettings):
         ROOT_PATH: str = '/api-mural'
         PSQL_HOST: str = '192.168.0.220'
 
-    FASTAPI_PORT: int = 8000
+    FASTAPI_PORT: int = 8005
     DESCRIPTION: str = 'API para controle do mural do Arancia'
     API_V1_STR: str = "/api/v1"
     API_V2_STR: str = "/api/v2"
