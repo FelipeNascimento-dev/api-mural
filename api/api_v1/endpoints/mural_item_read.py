@@ -5,7 +5,7 @@ from asyncpg import UniqueViolationError
 from fastapi import APIRouter, Depends, HTTPException, status
 from psycopg2 import IntegrityError
 from sqlalchemy.orm import Session
-from core.request import RequestClient
+
 from schemas.api_v1.mural_item_read_schema import MuralItemReadBaseSC, MuralItemReadCreateSC, MuralItemReadUpdateSC, MuralItemReadInDbBaseSC
 from crud.crud_mural_item_read import mural_item_read_crud
 from crud.crud_mural_item import mural_item_crud

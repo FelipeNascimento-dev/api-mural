@@ -285,12 +285,39 @@ async def create_item(
 -Deve conter uma lista de ids das entidades as quais o item será atrelado. Sejam elas usuários, grupos ou gais (somente permitido uma por vez)
 
     """
+    if item_in.severity == 'critical' and not item_in.until_read:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                            detail="Para itens criticos, é necessário confirmação de leitura obrigatório!")
+
+    if item_in.item_type in ('announcement', 'notice') and not (item_in.ends_at or item_in.until_read):
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                            detail="Para itens do tipo 'announcement' ou 'notice', é obrigatório ter confirmação de leitura ('until_read') ou data final ('ends_at').")
+
+    if item_in.item_type in ('manual', 'script') and (item_in.ends_at or item_in.until_read):
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                            detail="Para manuais ou scripts, é necessario que o item tenha prazo indefinido. Não envie ends_at")
+
+    if item_in.is_indefinite and item_in.ends_at:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                            detail="Itens marcados como 'definitivos' não podem conter ends_at.")
+
     if item_in.target_type != 'all' and not item_in.ids:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                            detail="O campo ids é obrigatório quando o target for 'all'")
+                            detail="O campo ids é obrigatório quando o target for != 'all'")
+
+    if item_in.target_type == 'all' and item_in.ids:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                            detail="O campo ids não deve ser enviado quando o target for 'all'")
+
+    if item_in.ends_at and item_in.ends_at < datetime.now(timezone.utc):
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                            detail="A data de expiração (ends_at) deve estar no futuro.")
+
     if item_in.target_type != 'all':
         ids = item_in.ids
         item_data = item_in.model_dump(exclude={"ids"})
+    else:
+        item_data = item_in.model_dump()
 
     item_result = await mural_item_crud.create(db=db, obj_in=MuralItemCreateSC(**item_data))
 
