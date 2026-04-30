@@ -10,7 +10,7 @@ from models import mural_item_read_model
 from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from schemas.api_v1.mural_item_schema import MuralItemBaseSC, MuralItemCreateSC, MuralItemUpdateSC, MuralItemInDbBaseSC, MuralSeverityEnum, PayloadMuralItemCreateSC
+from schemas.api_v1.mural_item_schema import MuralItemBaseSC, MuralItemCreateSC, MuralItemUpdateSC, MuralItemInDbBaseSC, MuralSeverityEnum, PayloadMuralItemCreateSC, MuralItemDeleteSC
 from schemas.api_v1.mural_item_user_schema import MuralItemUserBaseSC, MuralItemUserCreateSC, MuralItemUserUpdateSC, MuralItemUserInDbBaseSC
 from schemas.api_v1.mural_item_gai_schema import MuralItemGaiBaseSC, MuralItemGaiCreateSC, MuralItemGaiUpdateSC, MuralItemGaiInDbBaseSC
 from schemas.api_v1.mural_item_group_schema import MuralItemGroupBaseSC, MuralItemGroupCreateSC, MuralItemGroupUpdateSC, MuralItemGroupInDbBaseSC
@@ -352,15 +352,33 @@ async def create_item(
 async def update_item(
     *,
     db: AsyncSession = Depends(deps.get_db_psql),
-    id: int
+    id: int,
+    item_in: MuralItemUpdateSC,
 ) -> Any:
     item = await mural_item_crud.get(db=db, id=id)
     if not item:
         raise HTTPException(status_code=404, detail="item not found")
 
     item_update = MuralItemUpdateSC(
-
+        title=item_in.title,
+        summary=item_in.summary,
+        content=item_in.content,
+        item_type=item_in.item_type,
+        severity=item_in.severity,
+        target_type=item_in.target_type,
+        is_active=item_in.is_active,
+        is_pinned=item_in.is_pinned,
+        starts_at=item_in.starts_at,
+        ends_at=item_in.ends_at,
+        is_indefinite=item_in.is_indefinite,
+        until_read=item_in.until_read,
+        external_link=item_in.external_link,
+        attachment_url=item_in.attachment_url,
+        image_url=item_in.image_url,
     )
+
+    item_updated = await mural_item_crud.update(db=db, db_obj=item, obj_in=item_update)
+    return item_updated
 
 
 @router.delete(path="/disable-item/{id}", response_model=MuralItemInDbBaseSC)
@@ -377,7 +395,7 @@ async def delete_item(
     if not item:
         raise HTTPException(status_code=404, detail="item not found")
 
-    item_update = MuralItemUpdateSC(
+    item_update = MuralItemDeleteSC(
         is_active=False
     )
 

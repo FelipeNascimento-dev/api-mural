@@ -66,37 +66,25 @@ class MuralItemCreateSC(MuralItemBaseSC):
 
 
 class MuralItemUpdateSC(BaseModel):
-    title: str
-    summary: str
-    content: Text
-
-    item_type: MuralTypeEnum
-    severity: MuralSeverityEnum
-    target_type: MuralTargetTypeEnum
-    is_active: bool = True
-    is_pinned: bool = False
-
+    title: Optional[str] = None
+    summary: Optional[str] = None
+    content: Optional[Text] = None
+    item_type: Optional[MuralTypeEnum] = "manual"
+    severity: Optional[MuralSeverityEnum] = "informational"
+    target_type: Optional[MuralTargetTypeEnum] = "all"
+    is_active: Optional[bool] = None
+    is_pinned: Optional[bool] = None
     starts_at: Optional[datetime.datetime] = None
     ends_at: Optional[datetime.datetime] = None
+    is_indefinite: Optional[bool] = None
+    until_read: Optional[bool] = None
+    external_link: Optional[str] = None
+    attachment_url: Optional[str] = None
+    image_url: Optional[str] = None
 
-    is_indefinite: bool = False
-    until_read: bool = False
 
-    external_link: str
-    attachment_url: str
-    image_url: str
-
-    created_by_id: int
-
-    @field_serializer("starts_at", "ends_at", when_used="json")
-    def serialize_dt(self, dt: datetime.datetime | None):
-        if dt is None:
-            return None
-
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=datetime.timezone.utc)
-
-        return dt.astimezone(ZoneInfo("America/Sao_Paulo")).isoformat()
+class MuralItemDeleteSC(BaseModel):
+    is_active: bool = True
 
 
 class MuralItemInDbBaseSC(MuralItemBaseSC):
