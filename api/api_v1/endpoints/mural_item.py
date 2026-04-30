@@ -253,7 +253,7 @@ async def read_items_by_user(
     return itens
 
 
-@router.post("/", response_model=MuralItemInDbBaseSC)
+@router.post("/create-item/", response_model=MuralItemInDbBaseSC)
 async def create_item(
         *,
         db: AsyncSession = Depends(deps.get_db_psql),
@@ -348,7 +348,22 @@ async def create_item(
     return item_result
 
 
-@router.delete(path="/{id}", response_model=MuralItemInDbBaseSC)
+@router.put(path="/update-item/{id}", response_model=MuralItemInDbBaseSC)
+async def update_item(
+    *,
+    db: AsyncSession = Depends(deps.get_db_psql),
+    id: int
+) -> Any:
+    item = await mural_item_crud.get(db=db, id=id)
+    if not item:
+        raise HTTPException(status_code=404, detail="item not found")
+
+    item_update = MuralItemUpdateSC(
+
+    )
+
+
+@router.delete(path="/disable-item/{id}", response_model=MuralItemInDbBaseSC)
 async def delete_item(
         *,
         db: AsyncSession = Depends(deps.get_db_psql),
