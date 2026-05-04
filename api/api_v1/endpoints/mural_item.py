@@ -285,33 +285,12 @@ async def create_item(
 -Deve conter uma lista de ids das entidades as quais o item será atrelado. Sejam elas usuários, grupos ou gais (somente permitido uma por vez)
 
     """
-    if item_in.severity == 'critical' and not item_in.until_read:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                            detail="Para itens criticos, é necessário confirmação de leitura obrigatório!")
+    item_payload = item_in.model_dump()
 
-    if item_in.item_type in ('announcement', 'notice') and not (item_in.ends_at or item_in.until_read):
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                            detail="Para itens do tipo 'announcement' ou 'notice', é obrigatório ter confirmação de leitura ('until_read') ou data final ('ends_at').")
-
-    if item_in.item_type in ('manual', 'script') and (item_in.ends_at or item_in.until_read):
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                            detail="Para manuais ou scripts, é necessario que o item tenha prazo indefinido. Não envie ends_at")
-
-    if item_in.is_indefinite and item_in.ends_at:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                            detail="Itens marcados como 'definitivos' não podem conter ends_at.")
-
-    if item_in.target_type != 'all' and not item_in.ids:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                            detail="O campo ids é obrigatório quando o target for != 'all'")
-
-    if item_in.target_type == 'all' and item_in.ids:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                            detail="O campo ids não deve ser enviado quando o target for 'all'")
-
-    if item_in.ends_at and item_in.ends_at < datetime.now(timezone.utc):
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                            detail="A data de expiração (ends_at) deve estar no futuro.")
+    mural_item_service.build_validation_itens(
+        item_data=item_payload,
+        ids=item_in.ids
+    )
 
     if item_in.target_type != 'all':
         ids = item_in.ids
@@ -356,8 +335,94 @@ async def update_item(
     item_in: MuralItemUpdateSC,
 ) -> Any:
     item = await mural_item_crud.get(db=db, id=id)
+
     if not item:
         raise HTTPException(status_code=404, detail="item not found")
+
+    item_data_atual = {
+        "title": item.title,
+        "summary": item.summary,
+        "content": item.content,
+        "item_type": item.item_type,
+        "severity": item.severity,
+        "target_type": item.target_type,
+        "is_active": item.is_active,
+        "is_pinned": item.is_pinned,
+        "starts_at": item.starts_at,
+        "ends_at": item.ends_at,
+        "is_indefinite": item.is_indefinite,
+        "until_read": item.until_read,
+        "external_link": item.external_link,
+        "attachment_url": item.attachment_url,
+        "image_url": item.image_url,
+    }
+
+    item_data_update = item_in.model_dump(exclude_unset=True)
+
+    item_data_validacao = {
+        **item_data_atual,
+        **item_data_update,
+    }
+
+    target_type_final = item_data_validacao.get("target_type")
+
+    ids_vinculados = []
+
+    if target_type_final == "users":
+        vinculos = await mural_item_user_crud.get_multi_dynamic_filters(
+            db=db,
+            filters=[
+                {
+                    "field": "mural_item_id",
+                    "operator": "=",
+                    "value": id
+                }
+            ]
+        )
+
+        ids_vinculados = [
+            vinculo.user_id
+            for vinculo in vinculos
+        ]
+
+    elif target_type_final == "gais":
+        vinculos = await mural_item_gai_crud.get_multi_dynamic_filters(
+            db=db,
+            filters=[
+                {
+                    "field": "mural_item_id",
+                    "operator": "=",
+                    "value": id
+                }
+            ]
+        )
+
+        ids_vinculados = [
+            vinculo.gai_id
+            for vinculo in vinculos
+        ]
+
+    elif target_type_final == "groups":
+        vinculos = await mural_item_group_crud.get_multi_dynamic_filters(
+            db=db,
+            filters=[
+                {
+                    "field": "mural_item_id",
+                    "operator": "=",
+                    "value": id
+                }
+            ]
+        )
+
+        ids_vinculados = [
+            vinculo.group_id
+            for vinculo in vinculos
+        ]
+
+    mural_item_service.build_validation_itens(
+        item_data=item_data_validacao,
+        ids=ids_vinculados
+    )
 
     item_update = MuralItemUpdateSC(
         title=item_in.title,
@@ -377,7 +442,12 @@ async def update_item(
         image_url=item_in.image_url,
     )
 
-    item_updated = await mural_item_crud.update(db=db, db_obj=item, obj_in=item_update)
+    item_updated = await mural_item_crud.update(
+        db=db,
+        db_obj=item,
+        obj_in=item_update
+    )
+
     return item_updated
 
 

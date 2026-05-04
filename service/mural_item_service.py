@@ -1,5 +1,7 @@
 from datetime import datetime, timezone
 
+from fastapi import HTTPException, status
+
 
 class MuralItemService():
     def _build_field_name(self,  field_name: str, relation: bool = True):
@@ -64,6 +66,42 @@ class MuralItemService():
                 "value": target_type
             }
         return filter_final
+
+    def build_validation_itens(self, item_data: dict, ids: list[int] | None):
+        severity = item_data.get('severity')
+        until_read = item_data.get('until_read')
+        item_type = item_data.get('item_type')
+        ends_at = item_data.get('ends_at')
+        is_indefinite = item_data.get('is_indefinite')
+        target_type = item_data.get('target_type')
+
+        if severity == 'critical' and not until_read:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                                detail="Para itens críticos, é necessário confirmação de leitura obrigatória!")
+
+        if item_type in ('announcement', 'notice') and not (ends_at or until_read):
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                                detail="Para itens do tipo 'announcement' ou 'notice', é obrigatório ter confirmação de leitura ('until_read') ou data final ('ends_at').")
+
+        if item_type in ('manual', 'script') and (ends_at or until_read):
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                                detail="Para manuais ou scripts, é necessário que o item tenha prazo indefinido. Não envie ends_at nem until_read.")
+
+        if is_indefinite and ends_at:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                                detail="Itens marcados como 'definitivos' não podem conter ends_at.")
+
+        if target_type != 'all' and not ids:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                                detail="O campo ids é obrigatório quando o target for != 'all'")
+
+        if target_type == 'all' and ids:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                                detail="O campo ids não deve ser enviado quando o target for 'all'")
+
+        if ends_at and isinstance(ends_at, datetime) and ends_at < datetime.now(timezone.utc):
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                                detail="A data de expiração (ends_at) deve estar no futuro.")
 
 
 mural_item_service = MuralItemService()
