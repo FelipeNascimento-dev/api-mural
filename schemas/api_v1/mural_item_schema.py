@@ -44,9 +44,9 @@ class MuralItemBaseSC(BaseModel):
     is_indefinite: bool = False
     until_read: bool = False
 
-    external_link: str
-    attachment_url: str
-    image_url: str
+    external_link: Optional[str] = None
+    attachment_url: Optional[str] = None
+    image_url: Optional[str] = None
 
     created_by_id: int
 
