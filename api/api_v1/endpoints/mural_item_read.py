@@ -28,6 +28,34 @@ async def read_item_reads(
     return await mural_item_read_crud.get_multi(db=db, skip=skip, limit=limit)
 
 
+@router.get("/by-user/{user_id}", response_model=List[MuralItemReadInDbBaseSC])
+async def read_item_reads_by_user(
+        user_id: int,
+        db: Session = Depends(deps.get_db_psql),
+        skip: int = 0,
+        limit: int = 100,
+) -> Any:
+    """
+    Retrieve item_reads by user_id.
+    """
+    logger.info(f"Consultando leituras dos itens do usuário {user_id}")
+
+    return await mural_item_read_crud.get_multi_dynamic_filters(
+        db=db,
+        filters=[
+            {
+                "field": "user_id",
+                "operator": "==",
+                "value": user_id,
+            }
+        ],
+        order_by="read_at",
+        order_direction="desc",
+        offset=skip,
+        limit=limit,
+    )
+
+
 @router.post("/", response_model=MuralItemReadInDbBaseSC)
 async def create_item_read(
         *,
