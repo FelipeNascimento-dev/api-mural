@@ -6,6 +6,13 @@ from pydantic import BaseModel, Field
 from enum import Enum
 
 
+class MuralItemAttachments(BaseModel):
+    file_name: str
+    file_url: str
+    file_extension: str
+    file_description: Optional[str] = None
+
+
 class MuralTypeEnum(str, Enum):
     notice = "notice"
     announcement = "announcement"
@@ -45,7 +52,7 @@ class MuralItemBaseSC(BaseModel):
     until_read: bool = False
 
     external_link: Optional[str] = None
-    attachment_url: Optional[str] = None
+    attachments: Optional[list[MuralItemAttachments]] = None
     image_url: Optional[str] = None
 
     created_by_id: int
@@ -69,9 +76,9 @@ class MuralItemUpdateSC(BaseModel):
     title: Optional[str] = None
     summary: Optional[str] = None
     content: Optional[Text] = None
-    item_type: Optional[MuralTypeEnum] = "manual"
-    severity: Optional[MuralSeverityEnum] = "informational"
-    target_type: Optional[MuralTargetTypeEnum] = "all"
+    item_type: Optional[MuralTypeEnum] = None
+    severity: Optional[MuralSeverityEnum] = None
+    target_type: Optional[MuralTargetTypeEnum] = None
     is_active: Optional[bool] = None
     is_pinned: Optional[bool] = None
     starts_at: Optional[datetime.datetime] = None
@@ -79,7 +86,7 @@ class MuralItemUpdateSC(BaseModel):
     is_indefinite: Optional[bool] = None
     until_read: Optional[bool] = None
     external_link: Optional[str] = None
-    attachment_url: Optional[str] = None
+    attachments: Optional[list[MuralItemAttachments]] = None
     image_url: Optional[str] = None
 
 
