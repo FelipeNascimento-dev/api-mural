@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 
 from fastapi import HTTPException, status
+from schemas.api_v1.mural_item_schema import MuralItemCreateSC, MuralItemUpdateSC
 
 
 class MuralItemService():
@@ -67,13 +68,13 @@ class MuralItemService():
             }
         return filter_final
 
-    def build_validation_itens(self, item_data: dict, ids: list[int] | None):
-        severity = item_data.get('severity')
-        until_read = item_data.get('until_read')
-        item_type = item_data.get('item_type')
-        ends_at = item_data.get('ends_at')
-        is_indefinite = item_data.get('is_indefinite')
-        target_type = item_data.get('target_type')
+    def build_validation_itens(self, item_data: MuralItemUpdateSC, ids: list[int] | None):
+        severity = item_data.severity
+        until_read = item_data.until_read
+        item_type = item_data.item_type
+        ends_at = item_data.ends_at
+        is_indefinite = item_data.is_indefinite
+        target_type = item_data.target_type
 
         if severity == 'critical' and not until_read:
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -91,11 +92,11 @@ class MuralItemService():
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                                 detail="Itens marcados como 'definitivos' não podem conter ends_at.")
 
-        if target_type != 'all' and not ids:
+        if target_type and target_type != 'all' and not ids:
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                                 detail="O campo ids é obrigatório quando o target for != 'all'")
 
-        if target_type == 'all' and ids:
+        if target_type and target_type == 'all' and ids:
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                                 detail="O campo ids não deve ser enviado quando o target for 'all'")
 

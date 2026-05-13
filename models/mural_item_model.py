@@ -3,6 +3,7 @@ from sqlalchemy import Boolean, Column, Integer, String, ForeignKey, BigInteger,
 from sqlalchemy.orm import relationship
 from db.base_class import Base
 from models.auth_user_model import AuthUserModel
+from sqlalchemy.dialects.postgresql import JSONB
 
 
 class MuralItemModel(Base):
@@ -36,7 +37,11 @@ class MuralItemModel(Base):
     until_read = Column(Boolean, nullable=False, default=False)
 
     external_link = Column(String(500), nullable=True)
+
+    # remover depois de ajustada as APIs para o novo campo
     attachment_url = Column(String(500), nullable=True)
+    attachments = Column(JSONB)
+
     image_url = Column(String(500), nullable=True)
 
     created_by_id = Column(Integer, ForeignKey("auth_user.id"), nullable=False)

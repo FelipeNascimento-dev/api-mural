@@ -285,10 +285,10 @@ async def create_item(
 -Deve conter uma lista de ids das entidades as quais o item será atrelado. Sejam elas usuários, grupos ou gais (somente permitido uma por vez)
 
     """
-    item_payload = item_in.model_dump()
+    # item_payload = item_in.model_dump()
 
     mural_item_service.build_validation_itens(
-        item_data=item_payload,
+        item_data=item_in,
         ids=item_in.ids
     )
 
@@ -339,32 +339,33 @@ async def update_item(
     if not item:
         raise HTTPException(status_code=404, detail="item not found")
 
-    item_data_atual = {
-        "title": item.title,
-        "summary": item.summary,
-        "content": item.content,
-        "item_type": item.item_type,
-        "severity": item.severity,
-        "target_type": item.target_type,
-        "is_active": item.is_active,
-        "is_pinned": item.is_pinned,
-        "starts_at": item.starts_at,
-        "ends_at": item.ends_at,
-        "is_indefinite": item.is_indefinite,
-        "until_read": item.until_read,
-        "external_link": item.external_link,
-        "attachment_url": item.attachment_url,
-        "image_url": item.image_url,
-    }
+    item_data_atual = MuralItemBaseSC(
+        title=item.title,
+        summary=item.summary,
+        content=item.content,
+        item_type=item.item_type,
+        severity=item.severity,
+        target_type=item.target_type,
+        is_active=item.is_active,
+        is_pinned=item.is_pinned,
+        starts_at=item.starts_at,
+        ends_at=item.ends_at,
+        is_indefinite=item.is_indefinite,
+        until_read=item.until_read,
+        external_link=item.external_link,
+        attachments=item.attachments,
+        image_url=item.image_url,
+        created_by_id=item.created_by_id
+    )
 
-    item_data_update = item_in.model_dump(exclude_unset=True)
+    # item_data_update = item_in.model_dump(exclude_unset=True)
 
-    item_data_validacao = {
-        **item_data_atual,
-        **item_data_update,
-    }
+    # item_data_validacao = {
+    #     **item_data_atual.model_dump(),
+    #     **item_data_update,
+    # }
 
-    target_type_final = item_data_validacao.get("target_type")
+    target_type_final = item_in.target_type or item_data_atual.target_type
 
     ids_vinculados = []
 
@@ -420,32 +421,14 @@ async def update_item(
         ]
 
     mural_item_service.build_validation_itens(
-        item_data=item_data_validacao,
+        item_data=item_in,
         ids=ids_vinculados
-    )
-
-    item_update = MuralItemUpdateSC(
-        title=item_in.title,
-        summary=item_in.summary,
-        content=item_in.content,
-        item_type=item_in.item_type,
-        severity=item_in.severity,
-        target_type=item_in.target_type,
-        is_active=item_in.is_active,
-        is_pinned=item_in.is_pinned,
-        starts_at=item_in.starts_at,
-        ends_at=item_in.ends_at,
-        is_indefinite=item_in.is_indefinite,
-        until_read=item_in.until_read,
-        external_link=item_in.external_link,
-        attachment_url=item_in.attachment_url,
-        image_url=item_in.image_url,
     )
 
     item_updated = await mural_item_crud.update(
         db=db,
         db_obj=item,
-        obj_in=item_update
+        obj_in=item_in
     )
 
     return item_updated
