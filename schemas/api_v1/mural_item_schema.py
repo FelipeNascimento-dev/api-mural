@@ -52,7 +52,7 @@ class MuralItemBaseSC(BaseModel):
     until_read: bool = False
 
     external_link: Optional[str] = None
-    attachments: list[MuralItemAttachments]
+    attachments: Optional[list[MuralItemAttachments]] = None
     image_url: Optional[str] = None
 
     created_by_id: int
