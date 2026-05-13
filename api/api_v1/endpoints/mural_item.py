@@ -10,7 +10,7 @@ from models import mural_item_read_model
 from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from schemas.api_v1.mural_item_schema import MuralItemBaseSC, MuralItemCreateSC, MuralItemUpdateSC, MuralItemInDbBaseSC, MuralSeverityEnum, PayloadMuralItemCreateSC
+from schemas.api_v1.mural_item_schema import MuralItemBaseSC, MuralItemCreateSC, MuralItemUpdateSC, MuralItemInDbBaseSC, MuralSeverityEnum, PayloadMuralItemCreateSC, MuralItemDeleteSC
 from schemas.api_v1.mural_item_user_schema import MuralItemUserBaseSC, MuralItemUserCreateSC, MuralItemUserUpdateSC, MuralItemUserInDbBaseSC
 from schemas.api_v1.mural_item_gai_schema import MuralItemGaiBaseSC, MuralItemGaiCreateSC, MuralItemGaiUpdateSC, MuralItemGaiInDbBaseSC
 from schemas.api_v1.mural_item_group_schema import MuralItemGroupBaseSC, MuralItemGroupCreateSC, MuralItemGroupUpdateSC, MuralItemGroupInDbBaseSC
@@ -253,7 +253,7 @@ async def read_items_by_user(
     return itens
 
 
-@router.post("/", response_model=MuralItemInDbBaseSC)
+@router.post("/create-item/", response_model=MuralItemInDbBaseSC)
 async def create_item(
         *,
         db: AsyncSession = Depends(deps.get_db_psql),
@@ -285,12 +285,18 @@ async def create_item(
 -Deve conter uma lista de ids das entidades as quais o item será atrelado. Sejam elas usuários, grupos ou gais (somente permitido uma por vez)
 
     """
-    if item_in.target_type != 'all' and not item_in.ids:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                            detail="O campo ids é obrigatório quando o target for 'all'")
+    item_payload = item_in.model_dump()
+
+    mural_item_service.build_validation_itens(
+        item_data=item_payload,
+        ids=item_in.ids
+    )
+
     if item_in.target_type != 'all':
         ids = item_in.ids
         item_data = item_in.model_dump(exclude={"ids"})
+    else:
+        item_data = item_in.model_dump()
 
     item_result = await mural_item_crud.create(db=db, obj_in=MuralItemCreateSC(**item_data))
 
@@ -321,17 +327,147 @@ async def create_item(
     return item_result
 
 
-@router.delete(path="/{id}", response_model=MuralItemInDbBaseSC)
+@router.put(path="/update-item/{id}", response_model=MuralItemInDbBaseSC)
+async def update_item(
+    *,
+    db: AsyncSession = Depends(deps.get_db_psql),
+    id: int,
+    item_in: MuralItemUpdateSC,
+) -> Any:
+    item = await mural_item_crud.get(db=db, id=id)
+
+    if not item:
+        raise HTTPException(status_code=404, detail="item not found")
+
+    item_data_atual = {
+        "title": item.title,
+        "summary": item.summary,
+        "content": item.content,
+        "item_type": item.item_type,
+        "severity": item.severity,
+        "target_type": item.target_type,
+        "is_active": item.is_active,
+        "is_pinned": item.is_pinned,
+        "starts_at": item.starts_at,
+        "ends_at": item.ends_at,
+        "is_indefinite": item.is_indefinite,
+        "until_read": item.until_read,
+        "external_link": item.external_link,
+        "attachment_url": item.attachment_url,
+        "image_url": item.image_url,
+    }
+
+    item_data_update = item_in.model_dump(exclude_unset=True)
+
+    item_data_validacao = {
+        **item_data_atual,
+        **item_data_update,
+    }
+
+    target_type_final = item_data_validacao.get("target_type")
+
+    ids_vinculados = []
+
+    if target_type_final == "users":
+        vinculos = await mural_item_user_crud.get_multi_dynamic_filters(
+            db=db,
+            filters=[
+                {
+                    "field": "mural_item_id",
+                    "operator": "=",
+                    "value": id
+                }
+            ]
+        )
+
+        ids_vinculados = [
+            vinculo.user_id
+            for vinculo in vinculos
+        ]
+
+    elif target_type_final == "gais":
+        vinculos = await mural_item_gai_crud.get_multi_dynamic_filters(
+            db=db,
+            filters=[
+                {
+                    "field": "mural_item_id",
+                    "operator": "=",
+                    "value": id
+                }
+            ]
+        )
+
+        ids_vinculados = [
+            vinculo.gai_id
+            for vinculo in vinculos
+        ]
+
+    elif target_type_final == "groups":
+        vinculos = await mural_item_group_crud.get_multi_dynamic_filters(
+            db=db,
+            filters=[
+                {
+                    "field": "mural_item_id",
+                    "operator": "=",
+                    "value": id
+                }
+            ]
+        )
+
+        ids_vinculados = [
+            vinculo.group_id
+            for vinculo in vinculos
+        ]
+
+    mural_item_service.build_validation_itens(
+        item_data=item_data_validacao,
+        ids=ids_vinculados
+    )
+
+    item_update = MuralItemUpdateSC(
+        title=item_in.title,
+        summary=item_in.summary,
+        content=item_in.content,
+        item_type=item_in.item_type,
+        severity=item_in.severity,
+        target_type=item_in.target_type,
+        is_active=item_in.is_active,
+        is_pinned=item_in.is_pinned,
+        starts_at=item_in.starts_at,
+        ends_at=item_in.ends_at,
+        is_indefinite=item_in.is_indefinite,
+        until_read=item_in.until_read,
+        external_link=item_in.external_link,
+        attachment_url=item_in.attachment_url,
+        image_url=item_in.image_url,
+    )
+
+    item_updated = await mural_item_crud.update(
+        db=db,
+        db_obj=item,
+        obj_in=item_update
+    )
+
+    return item_updated
+
+
+@router.delete(path="/disable-item/{id}", response_model=MuralItemInDbBaseSC)
 async def delete_item(
         *,
         db: AsyncSession = Depends(deps.get_db_psql),
-        id: int,
+        id: int
 ) -> Any:
     """
-    Delete an item.
+    Desabilita a visualização do item, sem remover o registro dele no DB.
     """
     item = await mural_item_crud.get(db=db, id=id)
+
     if not item:
         raise HTTPException(status_code=404, detail="item not found")
-    item = await mural_item_crud.remove(db=db, id=id)
-    return item
+
+    item_update = MuralItemDeleteSC(
+        is_active=False
+    )
+
+    item_att = await mural_item_crud.update(db=db, db_obj=item, obj_in=item_update)
+    return item_att

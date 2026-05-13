@@ -44,9 +44,9 @@ class MuralItemBaseSC(BaseModel):
     is_indefinite: bool = False
     until_read: bool = False
 
-    external_link: str
-    attachment_url: str
-    image_url: str
+    external_link: Optional[str] = None
+    attachment_url: Optional[str] = None
+    image_url: Optional[str] = None
 
     created_by_id: int
 
@@ -65,8 +65,26 @@ class MuralItemCreateSC(MuralItemBaseSC):
     pass
 
 
-class MuralItemUpdateSC(MuralItemBaseSC):
-    updated_at: Optional[datetime.datetime] = None
+class MuralItemUpdateSC(BaseModel):
+    title: Optional[str] = None
+    summary: Optional[str] = None
+    content: Optional[Text] = None
+    item_type: Optional[MuralTypeEnum] = "manual"
+    severity: Optional[MuralSeverityEnum] = "informational"
+    target_type: Optional[MuralTargetTypeEnum] = "all"
+    is_active: Optional[bool] = None
+    is_pinned: Optional[bool] = None
+    starts_at: Optional[datetime.datetime] = None
+    ends_at: Optional[datetime.datetime] = None
+    is_indefinite: Optional[bool] = None
+    until_read: Optional[bool] = None
+    external_link: Optional[str] = None
+    attachment_url: Optional[str] = None
+    image_url: Optional[str] = None
+
+
+class MuralItemDeleteSC(BaseModel):
+    is_active: bool = True
 
 
 class MuralItemInDbBaseSC(MuralItemBaseSC):
