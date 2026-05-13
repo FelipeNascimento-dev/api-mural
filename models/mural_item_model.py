@@ -39,7 +39,7 @@ class MuralItemModel(Base):
     external_link = Column(String(500), nullable=True)
 
     # remover depois de ajustada as APIs para o novo campo
-    attachment_url = Column(String(500), nullable=True)
+    # attachment_url = Column(String(500), nullable=True)
     attachments = Column(JSONB)
 
     image_url = Column(String(500), nullable=True)
