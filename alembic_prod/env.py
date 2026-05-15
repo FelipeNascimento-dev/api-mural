@@ -37,7 +37,8 @@ PREFIX_LIST = [
 EXCLUDE_TABLES = {
     "auth_user_user_permissions",
     "auth_user_groups",
-    "logistica_groupaditionalinformationlegacy"
+    "logistica_groupaditionalinformationlegacy",
+    "logistica_userdesignation"
 }
 
 
