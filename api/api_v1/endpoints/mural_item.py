@@ -257,6 +257,38 @@ async def read_items_by_user(
     return itens
 
 
+@router.get("/by-created-by/", response_model=List[MuralItemInDbBaseSC])
+async def read_items_by_creator(
+    created_by_id: int,
+    db: AsyncSession = Depends(deps.get_db_psql),
+    skip: int = 0,
+    limit: int = 100,
+) -> Any:
+    """
+    Consulta os itens do mural criados por um usuário específico.
+    """
+    logger.info("Consultando itens do mural por usuário criador")
+
+    filters = [
+        {
+            "field": "created_by_id",
+            "operator": "=",
+            "value": created_by_id
+        }
+    ]
+
+    itens = await mural_item_crud.get_multi_dynamic_filters(
+        db=db,
+        filters=filters,
+        order_by="created_at",
+        order_direction="desc",
+        offset=skip,
+        limit=limit
+    )
+
+    return itens
+
+
 @router.post("/create-item/", response_model=MuralItemInDbBaseSC)
 async def create_item(
         *,
