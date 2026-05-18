@@ -61,7 +61,8 @@ async def read_items_by_user(
     gai_id: int,
     offset: int = 0,
     limit: int = 10,
-    db: AsyncSession = Depends(deps.get_db_psql)
+    db: AsyncSession = Depends(deps.get_db_psql),
+    reads: bool = False
 ) -> Any:
     """
     Consulta os itens do mural disponíveis para um usuário.
@@ -163,27 +164,30 @@ async def read_items_by_user(
     # =====================================================
     # 5. Buscar itens já lidos pelo usuário
     # =====================================================
-    itens_lidos_filters = filters_default + [
-        {
-            "field": "user_id",
-            "operator": "=",
-            "value": user_id
-        },
-        {
-            "field": "mural_item.until_read",
-            "operator": "=",
-            "value": True
-        }
-    ]
-    itens_lidos = await mural_item_read_crud.get_multi_dynamic_filters(
-        db=db,
-        filters=itens_lidos_filters
-    )
+    if reads:
+        itens_lidos_ids = []
+    else:
+        itens_lidos_filters = filters_default + [
+            {
+                "field": "user_id",
+                "operator": "=",
+                "value": user_id
+            },
+            {
+                "field": "mural_item.until_read",
+                "operator": "=",
+                "value": True
+            }
+        ]
+        itens_lidos = await mural_item_read_crud.get_multi_dynamic_filters(
+            db=db,
+            filters=itens_lidos_filters
+        )
 
-    itens_lidos_ids = [
-        item.mural_item_id
-        for item in itens_lidos
-    ]
+        itens_lidos_ids = [
+            item.mural_item_id
+            for item in itens_lidos
+        ]
 
     # =====================================================
     # 6. Montar regra de visibilidade
