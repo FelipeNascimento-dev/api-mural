@@ -1,5 +1,6 @@
 from .base_class import Base  # noqa
 from models.gai_model import GaiModel  # noqa
+from models.mural_item_designation_model import MuralItemDesignationModel  # noqa
 from models.auth_group_model import AuthGroupModel  # noqa
 from models.auth_user_model import AuthUserModel  # noqa
 from models.mural_item_gai_model import MuralItemGaiModel  # noqa

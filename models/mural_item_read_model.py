@@ -15,6 +15,7 @@ class MuralItemReadModel(Base):
     mural_item = relationship("MuralItemModel", lazy="selectin")
     mural_item_id = Column(Integer, ForeignKey(
         "mural_item.id"), nullable=False)
+    user = relationship("AuthUserModel", lazy="selectin")
     user_id = Column(Integer, ForeignKey("auth_user.id"), nullable=False)
 
     # is_read = Column(Boolean, nullable=False, default=False)

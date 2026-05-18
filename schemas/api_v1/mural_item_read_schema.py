@@ -31,3 +31,11 @@ class MuralItemReadInDbBaseSC(MuralItemReadBaseSC):
             dt = dt.replace(tzinfo=datetime.timezone.utc)
 
         return dt.astimezone(ZoneInfo("America/Sao_Paulo")).isoformat()
+
+
+class MuralItemReadByIdResponseSC(BaseModel):
+    mural_item_id: int
+    user_id: int
+    read_at: Optional[datetime.datetime]
+    username: str
+    user_name: str

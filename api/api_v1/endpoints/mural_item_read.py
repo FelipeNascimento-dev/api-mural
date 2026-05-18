@@ -1,4 +1,4 @@
-from typing import Any, List
+from typing import Any, List, Optional
 import logging
 
 from asyncpg import UniqueViolationError
@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from psycopg2 import IntegrityError
 from sqlalchemy.orm import Session
 
-from schemas.api_v1.mural_item_read_schema import MuralItemReadBaseSC, MuralItemReadCreateSC, MuralItemReadUpdateSC, MuralItemReadInDbBaseSC
+from schemas.api_v1.mural_item_read_schema import MuralItemReadBaseSC, MuralItemReadCreateSC, MuralItemReadByIdResponseSC, MuralItemReadInDbBaseSC
 from crud.crud_mural_item_read import mural_item_read_crud
 from crud.crud_mural_item import mural_item_crud
 from api import deps
@@ -54,6 +54,80 @@ async def read_item_reads_by_user(
         offset=skip,
         limit=limit,
     )
+
+
+@router.get("/by-item-id/{item_id}", response_model=List[MuralItemReadByIdResponseSC])
+async def read_item_read_by_id(
+        item_id: int,
+        db: Session = Depends(deps.get_db_psql),
+        skip: int = 0,
+        limit: int = 20,
+        username: Optional[str] = None,
+        name: Optional[str] = None,
+        gai_id: Optional[int] = None
+) -> Any:
+    """
+    Retrieve an item_read by its ID.
+    """
+    logger.info(f"Consultando leitura do item com ID {item_id}")
+
+    filters = [
+        {
+            "field": "mural_item_id",
+            "operator": "==",
+            "value": item_id,
+        }
+    ]
+
+    if username:
+        filters.append({
+            "field": "user.username",
+            "operator": "==",
+            "value": username,
+        })
+
+    if name:
+        filters.append({
+            "logic": "or",
+            "conditions": [
+                {
+                    "field": "user.first_name",
+                    "operator": "ilike",
+                    "value": f"%{name}%",
+                },
+                {
+                    "field": "user.last_name",
+                    "operator": "ilike",
+                    "value": f"%{name}%",
+                }
+            ]
+        })
+
+    if gai_id:
+        filters.append({
+            "field": "user.designation.gai_id",
+            "operator": "==",
+            "value": gai_id,
+        })
+
+    items = await mural_item_read_crud.get_multi_dynamic_filters(
+        db=db,
+        filters=filters,
+        order_by="read_at",
+        order_direction="desc",
+        offset=skip,
+        limit=limit,
+    )
+
+    items_response = [MuralItemReadByIdResponseSC(
+        mural_item_id=item.mural_item_id,
+        user_id=item.user_id,
+        read_at=item.read_at,
+        username=item.user.username,
+        user_name=item.user.first_name.strip() + " " + item.user.last_name.strip()
+    ) for item in items]
+
+    return items_response
 
 
 @router.post("/", response_model=MuralItemReadInDbBaseSC)
