@@ -60,7 +60,7 @@ async def read_items_by_user(
     user_id: int,
     gai_id: int,
     offset: int = 0,
-    limit: int = 10,
+    limit: int = None,
     db: AsyncSession = Depends(deps.get_db_psql),
     reads: bool = False
 ) -> Any:
