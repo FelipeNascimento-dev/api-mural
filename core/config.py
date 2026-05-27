@@ -21,15 +21,15 @@ class Settings(BaseSettings):
         PROJECT_NAME: str = 'API Mural - Homologação'
         ROOT_PATH: str = '/hg-api-mural'
         PSQL_HOST: str = '192.168.0.219'
+        API_V1_STR: str = "/api"
     else:
         PROJECT_NAME: str = 'API Mural - Produção'
         ROOT_PATH: str = '/api-mural'
         PSQL_HOST: str = '192.168.0.220'
+        API_V1_STR: str = "/api"
 
     FASTAPI_PORT: int = 8005
     DESCRIPTION: str = 'API para controle do mural do Arancia'
-    API_V1_STR: str = "/api/v1"
-    API_V2_STR: str = "/api/v2"
     API_VERSION: str = '1.0.0'
     SECRET_KEY: str = secrets.token_urlsafe(32)
 
