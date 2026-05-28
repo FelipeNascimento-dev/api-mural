@@ -172,12 +172,13 @@ async def read_items_by_user(
                 "field": "user_id",
                 "operator": "=",
                 "value": user_id
-            },
-            {
-                "field": "mural_item.until_read",
-                "operator": "=",
-                "value": True
             }
+            # },
+            # {
+            #     "field": "mural_item.until_read",
+            #     "operator": "=",
+            #     "value": True
+            # }
         ]
         itens_lidos = await mural_item_read_crud.get_multi_dynamic_filters(
             db=db,
@@ -227,11 +228,11 @@ async def read_items_by_user(
         {
             "logic": "or",
             "conditions": [
-                {
-                    "field": "until_read",
-                    "operator": "=",
-                    "value": False
-                },
+                # {
+                #     "field": "until_read",
+                #     "operator": "=",
+                #     "value": False
+                # },
                 {
                     "field": "id",
                     "operator": "notin",
